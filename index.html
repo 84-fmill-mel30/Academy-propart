@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propart Code Trainer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root { --blue: #00f3ff; --green: #0f0; --dark: #050505; --gold: #ffcc00; }
+        body { background: var(--dark); color: white; font-family: 'Roboto Mono', monospace; margin: 0; padding: 20px; }
+        .card { background: #111; border: 1px solid var(--blue); padding: 20px; border-radius: 15px; box-shadow: 0 0 15px var(--blue); }
+        h1 { font-family: 'Orbitron'; color: var(--blue); font-size: 1.2rem; text-align: center; }
+        .lesson { background: #000; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid var(--gold); }
+        textarea { width: 100%; height: 80px; background: #111; color: var(--green); border: 1px solid #444; padding: 10px; margin-top: 10px; border-radius: 5px; box-sizing: border-box; }
+        .btn { background: var(--blue); color: #000; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; font-family: 'Orbitron'; cursor: pointer; margin-top: 10px; }
+        code { display: block; background: #000; color: var(--gold); padding: 15px; margin-top: 15px; border-radius: 5px; font-size: 0.8rem; white-space: pre; border: 1px dashed #444; }
+        .badge { color: var(--green); font-size: 0.7rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>PROPART CODE TRAINER</h1>
+        <p style="font-size: 0.7rem; text-align: center; color: #888;">TRADUCE TU MENTE MECÁNICA A CÓDIGO</p>
+
+        <div class="lesson">
+            <span class="badge">LECCIÓN 1: EL SENSOR (CONDICIONALES)</span>
+            <p style="font-size: 0.8rem;">Escribe una idea como: <i>"Si el voltaje es menor a 12, prender alerta"</i></p>
+            <textarea id="inputCode" placeholder="Escribe aquí tu lógica mecánica..."></textarea>
+            <button class="btn" onclick="entrenar()">TRADUCIR A PROGRAMACIÓN</button>
+        </div>
+
+        <div id="displayArea" style="display: none;">
+            <p style="font-size: 0.7rem; color: var(--gold); margin-top: 20px;">ASÍ LO ENTIENDE LA COMPUTADORA:</p>
+            <code id="outputCode"></code>
+            <div id="explicacion" style="font-size: 0.75rem; color: #ccc; margin-top: 10px; line-height: 1.4;"></div>
+        </div>
+    </div>
+
+    <script>
+        function entrenar() {
+            const idea = document.getElementById('inputCode').value.toLowerCase();
+            const out = document.getElementById('outputCode');
+            const exp = document.getElementById('explicacion');
+            const area = document.getElementById('displayArea');
+
+            area.style.display = "block";
+
+            if (idea.includes("si") && (idea.includes("voltaje") || idea.includes("voltios"))) {
+                out.innerText = "if (voltaje < 12.0) {\n  alerta = true;\n  console.log('Batería Baja');\n}";
+                exp.innerHTML = "<b>¿Qué pasó aquí?</b><br>Usamos un <b>IF</b> (Si). Es como un relevador: si pasa corriente (la condición se cumple), se activa la salida.";
+            } 
+            else if (idea.includes("repetir") || idea.includes("siempre")) {
+                out.innerText = "setInterval(() => {\n  leerSensores();\n}, 1000);";
+                exp.innerHTML = "<b>¿Qué pasó aquí?</b><br>Esto es un <b>LOOP</b>. Es como el ciclo del motor: se repite una y otra vez cada 1000 milisegundos (1 segundo).";
+            }
+            else if (idea.includes("guardar") || idea.includes("nombre")) {
+                out.innerText = "let nombreCliente = 'Juan';\nlet falla = 'Corto en sensor MAF';";
+                exp.innerHTML = "<b>¿Qué pasó aquí?</b><br>Usamos <b>Variables (LET)</b>. Son como cajones donde guardas tornillos: les pones nombre para saber qué hay adentro.";
+            }
+            else {
+                out.innerText = "function sistemaMillan() {\n  // " + idea + "\n  ejecutarAccion();\n}";
+                exp.innerHTML = "<b>¿Qué pasó aquí?</b><br>Creamos una <b>FUNCTION</b>. Es como un procedimiento del manual: la grabas una vez y la puedes usar mil veces.";
+            }
+        }
+    </script>
+</body>
+</html>
