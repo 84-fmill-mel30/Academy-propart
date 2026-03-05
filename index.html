@@ -1,72 +1,461 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academia Millán | Diccionario de Código</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto+Mono&display=swap" rel="stylesheet">
-    <style>
-        :root { --blue: #00f3ff; --red: #ff0000; --dark: #0a0a0a; --gold: #ffcc00; }
-        body { background: var(--dark); color: white; font-family: 'Roboto Mono', monospace; margin: 0; padding: 15px; }
-        .card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        h2 { font-family: 'Orbitron'; color: var(--blue); border-bottom: 2px solid var(--blue); padding-bottom: 10px; }
-        
-        /* Tabla de Referencias */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; }
-        th { background: var(--blue); color: black; padding: 10px; text-align: left; }
-        td { border: 1px solid #333; padding: 10px; }
-        .symbol { color: var(--gold); font-weight: bold; font-size: 1.1rem; }
+import { useState, useRef } from "react";
 
-        /* Traductor */
-        textarea { width: 100%; height: 100px; background: #000; color: #fff; border: 1px solid var(--gold); padding: 10px; border-radius: 5px; box-sizing: border-box; }
-        pre { background: #000; color: #0f0; padding: 15px; border-radius: 5px; border: 1px dashed #555; overflow-x: auto; font-size: 0.85rem; }
-        .btn { background: var(--gold); color: black; border: none; padding: 15px; width: 100%; border-radius: 5px; font-weight: bold; font-family: 'Orbitron'; cursor: pointer; margin-top: 10px; }
-    </style>
-</head>
-<body>
+// ─── EJEMPLOS DE ÓRDENES ────────────────────────────────────────────
+const EJEMPLOS = [
+  { cat: "📁 Archivos", texto: "Ordena todas mis fotos por tamaño de mayor a menor y muévelas a una carpeta llamada Fotos_Ordenadas" },
+  { cat: "📁 Archivos", texto: "Borra todos los archivos duplicados de una carpeta y guarda un reporte de cuáles eliminó" },
+  { cat: "🌐 Google Drive", texto: "Lista todos los archivos de mi Google Drive que pesen más de 100MB y exporta la lista a un Excel" },
+  { cat: "🖥️ Sistema", texto: "Muestra cuánta memoria RAM y CPU está usando cada programa en este momento" },
+  { cat: "🖥️ Sistema", texto: "Apaga la computadora automáticamente a las 11 de la noche todos los días" },
+  { cat: "📊 Excel/CSV", texto: "Lee un archivo CSV con nombres y teléfonos y genera un PDF con tabla bien formateada" },
+  { cat: "🤖 Automatización", texto: "Toma captura de pantalla cada 5 minutos y guárdala con la fecha y hora en el nombre" },
+  { cat: "🤖 Automatización", texto: "Renombra todas las imágenes de una carpeta con el formato Foto_001, Foto_002, etc." },
+];
 
-    <h2>📚 DICCIONARIO DE SIMBOLOGÍA</h2>
-    <div class="card">
-        <table>
-            <tr><th>Símbolo</th><th>En el Código es...</th><th>En el Taller es...</th></tr>
-            <tr><td class="symbol">{ }</td><td>Llaves (Bloque)</td><td>El chasis o la caja donde va el motor. Todo lo de adentro pertenece a esa función.</td></tr>
-            <tr><td class="symbol">( )</td><td>Paréntesis</td><td>Los cables de entrada. Aquí metes los datos que la función va a procesar.</td></tr>
-            <tr><td class="symbol">[ ]</td><td>Corchetes (Array)</td><td>El estante de las piezas. Sirve para guardar una lista de cosas (ej. lista de marcas).</td></tr>
-            <tr><td class="symbol">;</td><td>Punto y coma</td><td>El torque final. Le dice a la computadora: "Esta instrucción ya terminó, pasa a la siguiente".</td></tr>
-            <tr><td class="symbol">=</td><td>Asignación</td><td>Es como ponerle una etiqueta a una caja. "Variable X vale 10".</td></tr>
-            <tr><td class="symbol">==</td><td>Comparación</td><td>Es un chequeo. "¿El voltaje es igual a 12?". Si sí, manda señal.</td></tr>
-            <tr><td class="symbol">=></td><td>Flecha (Arrow)</td><td>Es un puente. "Toma estos datos y mándalos directo a esta acción".</td></tr>
-        </table>
+const LENGUAJES = [
+  { id: "python", label: "🐍 Python", desc: "Windows / Mac / Linux" },
+  { id: "bash",   label: "🖥️ Bash/Shell", desc: "Mac / Linux / WSL" },
+  { id: "powershell", label: "⚡ PowerShell", desc: "Windows" },
+  { id: "javascript", label: "🌐 JavaScript (Node)", desc: "Cualquier sistema" },
+];
+
+const PASOS_INSTALAR = {
+  python: [
+    "1. Instala Python desde python.org/downloads",
+    "2. Guarda el código en un archivo .py (ej: mi_script.py)",
+    "3. Abre la terminal/CMD en esa carpeta",
+    "4. Ejecuta: python mi_script.py",
+  ],
+  bash: [
+    "1. Guarda el código en un archivo .sh (ej: mi_script.sh)",
+    "2. En terminal escribe: chmod +x mi_script.sh",
+    "3. Ejecuta con: ./mi_script.sh",
+  ],
+  powershell: [
+    "1. Guarda el código en un archivo .ps1 (ej: mi_script.ps1)",
+    "2. Abre PowerShell como Administrador",
+    "3. Ejecuta: .\\mi_script.ps1",
+  ],
+  javascript: [
+    "1. Instala Node.js desde nodejs.org",
+    "2. Guarda el código en un archivo .js (ej: mi_script.js)",
+    "3. En terminal: node mi_script.js",
+  ],
+};
+
+// ─── COMPONENTE PRINCIPAL ───────────────────────────────────────────
+export default function App() {
+  const [vista, setVista] = useState("traductor"); // traductor | aprender
+  const [orden, setOrden] = useState("");
+  const [lenguaje, setLenguaje] = useState("python");
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState(null); // {codigo, explicacion, pasos, advertencias}
+  const [escuchando, setEscuchando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  const [historial, setHistorial] = useState([]);
+  const recRef = useRef(null);
+
+  // ── VOZ ─────────────────────────────────────────────────────────
+  const startVoz = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("Tu navegador no soporta micrófono. Usa Chrome."); return; }
+    const r = new SR();
+    r.lang = "es-MX"; r.interimResults = false;
+    r.onresult = e => setOrden(p => (p + " " + e.results[0][0].transcript).trim());
+    r.onend = () => setEscuchando(false);
+    r.start(); recRef.current = r; setEscuchando(true);
+  };
+  const stopVoz = () => { recRef.current?.stop(); setEscuchando(false); };
+
+  // ── TRADUCIR ORDEN ───────────────────────────────────────────────
+  const traducir = async () => {
+    if (!orden.trim()) return;
+    setLoading(true); setResultado(null);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
+          system: `Eres un experto programador que traduce órdenes en español a código ejecutable.
+El usuario NO sabe programar. Tu objetivo es generar código que funcione directamente.
+
+Responde SOLO en JSON válido, sin markdown ni texto extra:
+{
+  "codigo": "el código completo y funcional, listo para ejecutar",
+  "titulo": "título corto de lo que hace (máx 8 palabras)",
+  "explicacion": "explica en español simple qué hace el código, línea por línea clave. Usa viñetas con •",
+  "pasos_extra": ["paso adicional si necesita instalar algo con pip/npm", "otro paso si aplica"],
+  "advertencias": ["advertencia importante si aplica, ej: hará cambios permanentes", "otra si aplica"],
+  "archivos_genera": ["lista de archivos que crea o modifica, o vacío si ninguno"]
+}
+
+El lenguaje de programación a usar es: ${lenguaje}
+Si el código requiere librerías externas, inclúyelas con pip install / npm install en pasos_extra.
+El código debe tener comentarios en español explicando cada sección importante.
+Si la tarea implica eliminar archivos, SIEMPRE agregar una advertencia.`,
+          messages: [{ role: "user", content: `Orden del usuario: ${orden}` }]
+        })
+      });
+      const data = await res.json();
+      const txt = data.content.map(c => c.text || "").join("");
+      const clean = txt.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setResultado(parsed);
+      setHistorial(h => [{ orden, lenguaje, resultado: parsed, fecha: new Date().toLocaleTimeString() }, ...h.slice(0, 9)]);
+    } catch (e) {
+      setResultado({
+        codigo: `# Error al generar el código\n# Intenta de nuevo o simplifica la orden`,
+        titulo: "Error",
+        explicacion: "Hubo un problema al procesar tu orden. Intenta ser más específico.",
+        pasos_extra: [],
+        advertencias: [],
+        archivos_genera: []
+      });
+    } finally { setLoading(false); }
+  };
+
+  const copiar = () => {
+    if (!resultado?.codigo) return;
+    navigator.clipboard.writeText(resultado.codigo);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2500);
+  };
+
+  // ── ESTILOS ──────────────────────────────────────────────────────
+  const S = {
+    app: { minHeight:"100vh", background:"linear-gradient(135deg,#010409 0%,#0d1117 60%,#0a0e1a 100%)", fontFamily:"'Segoe UI',system-ui,sans-serif", color:"#e6edf3", paddingBottom:60 },
+    header: { background:"#0d1117cc", backdropFilter:"blur(12px)", borderBottom:"1px solid #30363d", padding:"14px 20px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:50, flexWrap:"wrap" },
+    nav: { display:"flex", gap:0, borderBottom:"1px solid #21262d", padding:"0 20px", overflowX:"auto" },
+    navBtn: a => ({ padding:"12px 18px", border:"none", background:"none", cursor:"pointer", fontSize:13, fontWeight: a?700:400, color: a?"#58a6ff":"#8b949e", borderBottom: a?"2px solid #58a6ff":"2px solid transparent", transition:"all .2s", whiteSpace:"nowrap" }),
+    wrap: { maxWidth:860, margin:"0 auto", padding:"20px 14px" },
+    card: { background:"#161b22", borderRadius:14, padding:20, border:"1px solid #30363d", marginBottom:14 },
+    label: { fontSize:10, color:"#8b949e", fontWeight:700, letterSpacing:1, marginBottom:7, display:"block" },
+    textarea: { width:"100%", background:"#0d1117", border:"1.5px solid #30363d", borderRadius:10, padding:"13px 15px", color:"#e6edf3", fontSize:14, resize:"vertical", minHeight:90, outline:"none", fontFamily:"inherit", boxSizing:"border-box", lineHeight:1.6, transition:"border-color .2s" },
+    code: { width:"100%", background:"#0d1117", border:"1.5px solid #30363d", borderRadius:10, padding:"16px", color:"#e6edf3", fontSize:13, fontFamily:"'JetBrains Mono','Fira Code',monospace", lineHeight:1.8, overflowX:"auto", boxSizing:"border-box", whiteSpace:"pre", minHeight:120 },
+    btnP: { background:"linear-gradient(135deg,#238636,#2ea043)", color:"#fff", border:"none", borderRadius:9, padding:"12px 24px", fontSize:14, fontWeight:600, cursor:"pointer", transition:"all .2s" },
+    btnS: { background:"#21262d", color:"#e6edf3", border:"1px solid #30363d", borderRadius:9, padding:"12px 18px", fontSize:13, cursor:"pointer", transition:"all .2s" },
+    btnMic: a => ({ background: a?"linear-gradient(135deg,#da3633,#f85149)":"#21262d", color:"#fff", border: a?"none":"1px solid #30363d", borderRadius:9, padding:"12px 16px", fontSize:20, cursor:"pointer", transition:"all .2s", boxShadow: a?"0 0 18px #f8514966":"none" }),
+    badge: (bg,fg,b) => ({ background:bg, color:fg, border:`1px solid ${b||fg+'44'}`, borderRadius:5, padding:"2px 8px", fontSize:10, fontWeight:700, display:"inline-block" }),
+    langBtn: a => ({ background: a?"#1f3a5f":"#21262d", color: a?"#58a6ff":"#8b949e", border: a?"1.5px solid #58a6ff":"1px solid #30363d", borderRadius:8, padding:"8px 14px", cursor:"pointer", fontSize:12, fontWeight: a?700:400, transition:"all .2s", textAlign:"left" }),
+    warn: { background:"#3d1f0d", border:"1px solid #f0b42966", borderRadius:8, padding:"10px 14px", marginBottom:10 },
+    succ: { background:"#0f2a1a", border:"1px solid #3fb95066", borderRadius:8, padding:"10px 14px", marginBottom:10 },
+    info: { background:"#0d1f37", border:"1px solid #58a6ff44", borderRadius:8, padding:"10px 14px", marginBottom:10 },
+  };
+
+  // ── RENDER ───────────────────────────────────────────────────────
+  return (
+    <div style={S.app}>
+      <style>{`
+        textarea:focus { border-color:#58a6ff!important; }
+        button:hover { opacity:.85; transform:translateY(-1px); }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .fade { animation:fadeIn .3s ease; }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 18px #f8514966} 50%{box-shadow:0 0 36px #f85149aa} }
+        ::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-track{background:#0d1117} ::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+      `}</style>
+
+      {/* HEADER */}
+      <div style={S.header}>
+        <div style={{fontSize:26}}>⚡</div>
+        <div>
+          <div style={{fontSize:16,fontWeight:800}}>AprendeCode V2</div>
+          <div style={{fontSize:11,color:"#8b949e"}}>Habla o escribe lo que quieres hacer — yo lo convierto en código</div>
+        </div>
+        <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+          <span style={S.badge("#14301e","#3fb950","#276749")}>🤖 IA Integrada</span>
+          <span style={S.badge("#0d2137","#58a6ff","#1e3a5f")}>🎙️ Voz</span>
+        </div>
+      </div>
+
+      {/* NAV */}
+      <div style={S.nav}>
+        {[
+          {id:"traductor", label:"⚡ Traductor de Órdenes"},
+          {id:"aprender",  label:"📚 Aprender Programando"},
+          {id:"historial", label:`🕐 Historial (${historial.length})`},
+        ].map(n => (
+          <button key={n.id} style={S.navBtn(vista===n.id)} onClick={()=>setVista(n.id)}>{n.label}</button>
+        ))}
+      </div>
+
+      <div style={S.wrap}>
+
+        {/* ══ VISTA: TRADUCTOR ══════════════════════════════════════ */}
+        {vista === "traductor" && (
+          <div className="fade">
+
+            {/* Caja de orden */}
+            <div style={S.card}>
+              <div style={{fontSize:18,fontWeight:800,marginBottom:4}}>¿Qué quieres que haga tu computadora? 🎯</div>
+              <div style={{color:"#8b949e",fontSize:13,marginBottom:14}}>
+                Escríbelo o dilo en español normal — sin tecnicismos.
+              </div>
+
+              {/* Micrófono + texto */}
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <button style={S.btnMic(escuchando)} onClick={escuchando?stopVoz:startVoz}>
+                  {escuchando?"⏹":"🎙️"}
+                </button>
+                <div style={{flex:1,background:"#0d1117",border:"1px solid #30363d",borderRadius:8,padding:"10px 14px",fontSize:12,color:escuchando?"#f85149":"#8b949e",display:"flex",alignItems:"center",gap:6}}>
+                  {escuchando ? <><span style={{width:8,height:8,background:"#f85149",borderRadius:"50%",display:"inline-block",animation:"pulse 1s infinite"}}/>Escuchando... habla tu orden</> : "🎙️ Toca el micrófono y dicta tu orden en español"}
+                </div>
+              </div>
+
+              <textarea
+                style={S.textarea}
+                placeholder={"Ejemplos:\n• Ordena mis fotos por fecha y renómbralas con el formato YYYY-MM-DD\n• Mueve todos los PDF de Descargas a una carpeta por año\n• Lista todos los archivos mayores a 50MB en mi disco C"}
+                value={orden}
+                onChange={e=>setOrden(e.target.value)}
+              />
+
+              {/* Lenguaje */}
+              <div style={{marginTop:14,marginBottom:14}}>
+                <div style={S.label}>LENGUAJE DE PROGRAMACIÓN (elige según tu sistema)</div>
+                <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                  {LENGUAJES.map(l => (
+                    <button key={l.id} style={S.langBtn(lenguaje===l.id)} onClick={()=>setLenguaje(l.id)}>
+                      <div>{l.label}</div>
+                      <div style={{fontSize:10,color:"#8b949e",marginTop:2}}>{l.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button style={{...S.btnP, opacity:orden.trim()&&!loading?1:.5}} onClick={traducir} disabled={!orden.trim()||loading}>
+                  {loading ? "⏳ Generando código..." : "⚡ Traducir a código →"}
+                </button>
+                {orden && <button style={S.btnS} onClick={()=>{setOrden(""); setResultado(null);}}>🗑️ Limpiar</button>}
+              </div>
+            </div>
+
+            {/* Ejemplos */}
+            {!resultado && (
+              <div style={S.card}>
+                <div style={S.label}>💡 EJEMPLOS DE ÓRDENES — TOCA UNO PARA USARLO</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  {EJEMPLOS.map((e,i) => (
+                    <div key={i}
+                      style={{background:"#0d1117",border:"1px solid #30363d",borderRadius:8,padding:"10px 12px",cursor:"pointer",transition:"all .2s"}}
+                      onMouseEnter={el=>el.currentTarget.style.borderColor="#58a6ff"}
+                      onMouseLeave={el=>el.currentTarget.style.borderColor="#30363d"}
+                      onClick={()=>setOrden(e.texto)}
+                    >
+                      <div style={{fontSize:10,color:"#58a6ff",fontWeight:700,marginBottom:4}}>{e.cat}</div>
+                      <div style={{fontSize:12,color:"#8b949e",lineHeight:1.5}}>{e.texto}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* RESULTADO */}
+            {resultado && (
+              <div className="fade">
+
+                {/* Advertencias */}
+                {resultado.advertencias?.length > 0 && (
+                  <div style={S.warn}>
+                    <div style={{color:"#f0b429",fontWeight:700,fontSize:12,marginBottom:6}}>⚠️ LEE ESTO ANTES DE EJECUTAR</div>
+                    {resultado.advertencias.map((a,i) => <div key={i} style={{color:"#fbd38d",fontSize:12,marginBottom:3}}>• {a}</div>)}
+                  </div>
+                )}
+
+                {/* Código */}
+                <div style={S.card}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+                    <div>
+                      <div style={{fontWeight:800,fontSize:15}}>{resultado.titulo}</div>
+                      <span style={S.badge("#21262d","#8b949e")}>{LENGUAJES.find(l=>l.id===lenguaje)?.label}</span>
+                    </div>
+                    <div style={{display:"flex",gap:7}}>
+                      <button style={{...S.btnS, background:copiado?"#14301e":"#21262d", color:copiado?"#3fb950":"#e6edf3", border:copiado?"1px solid #276749":"1px solid #30363d"}} onClick={copiar}>
+                        {copiado ? "✅ Copiado!" : "📋 Copiar código"}
+                      </button>
+                      <button style={S.btnS} onClick={()=>setResultado(null)}>✖ Cerrar</button>
+                    </div>
+                  </div>
+
+                  {/* Bloque de código */}
+                  <div style={{position:"relative"}}>
+                    <div style={{background:"#161b22",borderRadius:"8px 8px 0 0",padding:"8px 14px",display:"flex",gap:6,alignItems:"center",borderBottom:"1px solid #30363d"}}>
+                      {["#ff5f57","#febc2e","#28c840"].map(c=><div key={c} style={{width:10,height:10,borderRadius:"50%",background:c}}/>)}
+                      <span style={{color:"#484f58",fontSize:11,marginLeft:8,fontFamily:"monospace"}}>
+                        script.{lenguaje==="javascript"?"js":lenguaje==="bash"?"sh":lenguaje==="powershell"?"ps1":"py"}
+                      </span>
+                    </div>
+                    <textarea
+                      readOnly
+                      style={{...S.code, borderRadius:"0 0 10px 10px", border:"1px solid #30363d", borderTop:"none", minHeight:220, cursor:"text"}}
+                      value={resultado.codigo}
+                    />
+                  </div>
+                </div>
+
+                {/* Explicación */}
+                <div style={S.card}>
+                  <div style={S.label}>🧠 ¿QUÉ HACE ESTE CÓDIGO?</div>
+                  <div style={{fontSize:13,color:"#e6edf3",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{resultado.explicacion}</div>
+                </div>
+
+                {/* Cómo ejecutarlo */}
+                <div style={S.card}>
+                  <div style={S.label}>🚀 CÓMO EJECUTARLO EN TU COMPUTADORA</div>
+                  {PASOS_INSTALAR[lenguaje]?.map((p,i) => (
+                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:8}}>
+                      <div style={{background:"#1f3a5f",color:"#58a6ff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</div>
+                      <div style={{fontSize:13,color:"#e6edf3",lineHeight:1.5}}>{p.replace(/^\d+\.\s*/,"")}</div>
+                    </div>
+                  ))}
+
+                  {resultado.pasos_extra?.length > 0 && (
+                    <div style={{...S.info, marginTop:10}}>
+                      <div style={{color:"#58a6ff",fontWeight:700,fontSize:11,marginBottom:6}}>📦 LIBRERÍAS ADICIONALES NECESARIAS</div>
+                      {resultado.pasos_extra.map((p,i)=>(
+                        <div key={i} style={{fontFamily:"monospace",fontSize:12,color:"#90cdf4",marginBottom:4,background:"#0d1117",padding:"4px 8px",borderRadius:5}}>$ {p}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {resultado.archivos_genera?.length > 0 && (
+                    <div style={{...S.succ, marginTop:10}}>
+                      <div style={{color:"#3fb950",fontWeight:700,fontSize:11,marginBottom:6}}>📄 ARCHIVOS QUE CREARÁ O MODIFICARÁ</div>
+                      {resultado.archivos_genera.map((f,i)=>(
+                        <div key={i} style={{fontSize:12,color:"#9ae6b4",marginBottom:3}}>• {f}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón nueva orden */}
+                <button style={{...S.btnP,width:"100%",padding:14}} onClick={()=>{setOrden("");setResultado(null);}}>
+                  ⚡ Nueva orden →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ VISTA: APRENDER ══════════════════════════════════════ */}
+        {vista === "aprender" && (
+          <div className="fade">
+            <div style={S.card}>
+              <div style={{fontSize:18,fontWeight:800,marginBottom:6}}>📚 Aprende programación desde cero</div>
+              <div style={{color:"#8b949e",fontSize:13,marginBottom:16}}>
+                Dile a Claude qué concepto quieres aprender y te lo explica con ejemplos prácticos.
+              </div>
+              <AprendeModulo />
+            </div>
+          </div>
+        )}
+
+        {/* ══ VISTA: HISTORIAL ══════════════════════════════════════ */}
+        {vista === "historial" && (
+          <div className="fade">
+            <div style={S.card}>
+              <div style={S.label}>🕐 HISTORIAL DE ÓRDENES TRADUCIDAS</div>
+              {historial.length === 0 ? (
+                <div style={{textAlign:"center",padding:40,color:"#8b949e"}}>
+                  <div style={{fontSize:32,marginBottom:10}}>📭</div>
+                  <div>Aún no has traducido ninguna orden. ¡Empieza en la pestaña Traductor!</div>
+                </div>
+              ) : historial.map((h,i) => (
+                <div key={i} style={{background:"#0d1117",borderRadius:10,padding:14,marginBottom:10,border:"1px solid #30363d"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:6}}>
+                    <span style={S.badge("#21262d","#58a6ff")}>{LENGUAJES.find(l=>l.id===h.lenguaje)?.label}</span>
+                    <span style={{color:"#8b949e",fontSize:11}}>{h.fecha}</span>
+                  </div>
+                  <div style={{fontSize:13,color:"#e6edf3",marginBottom:8,fontWeight:600}}>{h.resultado.titulo}</div>
+                  <div style={{fontSize:12,color:"#8b949e",marginBottom:10}}>{h.orden.slice(0,100)}{h.orden.length>100?"...":""}</div>
+                  <button style={S.btnS} onClick={()=>{setOrden(h.orden);setLenguaje(h.lenguaje);setResultado(h.resultado);setVista("traductor");}}>
+                    📋 Cargar este resultado
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
+  );
+}
 
-    <h2>🧠 TRADUCTOR DE LÓGICA MECÁNICA</h2>
-    <div class="card">
-        <p style="font-size:0.8rem; color:var(--gold);">Escribe tu idea (ej: "Si la pieza es bobina y el precio es mayor a 500, aplicar descuento"):</p>
-        <textarea id="ideaMecanica" placeholder="Escribe aquí..."></textarea>
-        <button class="btn" onclick="traducir()">GENERAR CÓDIGO PRO</button>
-        
-        <p style="font-size:0.8rem; margin-top:20px;">TRADUCCIÓN A JAVASCRIPT:</p>
-        <pre id="codigoResultado">// El código aparecerá aquí...</pre>
+// ─── MÓDULO APRENDER ────────────────────────────────────────────────
+function AprendeModulo() {
+  const [tema, setTema] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [leccion, setLeccion] = useState(null);
+
+  const TEMAS = ["Variables y tipos de datos","Funciones","Bucles for y while","Listas y diccionarios","Leer y escribir archivos","Manejo de errores","APIs y requests","Automatización con Python"];
+
+  const aprender = async () => {
+    if (!tema.trim()) return;
+    setLoading(true); setLeccion(null);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514", max_tokens:1200,
+          system:`Eres tutor de programación para principiantes hispanohablantes.
+Responde SOLO en JSON válido:
+{
+  "titulo": "título de la lección",
+  "intro": "introducción amigable en 2-3 oraciones",
+  "concepto": "explicación clara del concepto con analogía del mundo real",
+  "codigo": "ejemplo de código en Python comentado en español",
+  "ejercicio": "un ejercicio práctico simple para que el alumno practique",
+  "tip": "tip profesional corto"
+}`,
+          messages:[{role:"user",content:`Enséñame: ${tema}`}]
+        })
+      });
+      const data = await res.json();
+      const txt = data.content.map(c=>c.text||"").join("");
+      setLeccion(JSON.parse(txt.replace(/```json|```/g,"").trim()));
+    } catch(e) {
+      setLeccion({titulo:"Error",intro:"Intenta de nuevo.",concepto:"",codigo:"",ejercicio:"",tip:""});
+    } finally { setLoading(false); }
+  };
+
+  const S2 = {
+    input:{width:"100%",background:"#0d1117",border:"1.5px solid #30363d",borderRadius:9,padding:"11px 14px",color:"#e6edf3",fontSize:14,outline:"none",fontFamily:"inherit",boxSizing:"border-box"},
+    code:{background:"#0d1117",borderRadius:8,padding:14,fontFamily:"monospace",fontSize:13,color:"#e6edf3",lineHeight:1.8,overflowX:"auto",border:"1px solid #30363d",whiteSpace:"pre"},
+    sec:{marginBottom:14},
+    lbl:{fontSize:10,color:"#8b949e",fontWeight:700,letterSpacing:1,marginBottom:5,display:"block"},
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        <input style={S2.input} placeholder="¿Qué quieres aprender? Ej: cómo usar bucles for" value={tema} onChange={e=>setTema(e.target.value)} onKeyDown={e=>e.key==="Enter"&&aprender()} />
+        <button style={{background:"linear-gradient(135deg,#238636,#2ea043)",color:"#fff",border:"none",borderRadius:9,padding:"11px 20px",fontSize:14,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}} onClick={aprender} disabled={loading}>
+          {loading?"⏳ Cargando...":"📖 Aprender →"}
+        </button>
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+        {TEMAS.map(t=>(
+          <button key={t} style={{background:"#21262d",color:"#8b949e",border:"1px solid #30363d",borderRadius:6,padding:"5px 11px",fontSize:11,cursor:"pointer"}} onClick={()=>setTema(t)}>{t}</button>
+        ))}
+      </div>
+      {leccion && (
+        <div className="fade">
+          <div style={{fontSize:17,fontWeight:800,marginBottom:10,color:"#58a6ff"}}>{leccion.titulo}</div>
+          <div style={S2.sec}><div style={S2.lbl}>📖 INTRODUCCIÓN</div><div style={{fontSize:13,color:"#e6edf3",lineHeight:1.7}}>{leccion.intro}</div></div>
+          <div style={S2.sec}><div style={S2.lbl}>🧠 EL CONCEPTO</div><div style={{fontSize:13,color:"#e6edf3",lineHeight:1.7}}>{leccion.concepto}</div></div>
+          <div style={S2.sec}><div style={S2.lbl}>💻 EJEMPLO EN CÓDIGO</div><div style={S2.code}>{leccion.codigo}</div></div>
+          <div style={{background:"#0f2a1a",border:"1px solid #3fb95044",borderRadius:9,padding:14,marginBottom:10}}>
+            <div style={S2.lbl}>✏️ TU EJERCICIO</div>
+            <div style={{fontSize:13,color:"#9ae6b4",lineHeight:1.7}}>{leccion.ejercicio}</div>
+          </div>
+          <div style={{background:"#0d2137",border:"1px solid #58a6ff44",borderRadius:8,padding:12}}>
+            <span style={{color:"#58a6ff",fontWeight:700,fontSize:12}}>💡 TIP PRO: </span>
+            <span style={{fontSize:12,color:"#90cdf4"}}>{leccion.tip}</span>
+          </div>
+        </div>
+      )}
     </div>
-
-<script>
-    function traducir() {
-        const idea = document.getElementById('ideaMecanica').value.toLowerCase();
-        let codigo = "";
-
-        if(idea.includes("si") && idea.includes("entonces") || idea.includes("descuento")) {
-            codigo = `function calcularPrecio(pieza, precio) {\n  if (precio > 500) {\n    let descuento = precio * 0.10;\n    return precio - descuento;\n  }\n  return precio;\n}`;
-        } else if (idea.includes("lista") || idea.includes("inventario")) {
-            codigo = `const inventario = [\n  { id: 1, nombre: "Bujía", stock: 20 },\n  { id: 2, nombre: "Bobina", stock: 5 }\n];`;
-        } else if (idea.includes("repetir") || idea.includes("cada")) {
-            codigo = `setInterval(() => {\n  console.log("Revisando sensores...");\n}, 3000); // Se repite cada 3 segundos`;
-        } else {
-            codigo = `// Tu idea procesada:\nfunction accionAutomatica() {\n  // Analizando: ${idea}\n  let estado = "Operativo";\n  console.log(estado);\n}`;
-        }
-
-        document.getElementById('codigoResultado').innerText = codigo;
-    }
-</script>
-
-</body>
-</html>
+  );
+}
