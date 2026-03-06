@@ -381,7 +381,15 @@ Responde SOLO en JSON válido sin markdown:
       <div class="box-ok" style="margin-bottom:12px"><span class="lbl" style="color:var(--green)">✏️ TU EJERCICIO</span><div style="font-size:13px;color:#9ae6b4;line-height:1.7">${l.ejercicio}</div></div>
       <div class="box-info"><span style="color:var(--blue);font-weight:700;font-size:12px">💡 TIP PRO: </span><span style="font-size:12px;color:#90cdf4">${l.tip}</span></div>
     </div>`;
-  }catch(e){document.getElementById('leccion-result').innerHTML='<div class="card" style="color:var(--red)">❌ Error. Intenta de nuevo.</div>';}
+  }catch(e){
+    let msg='❌ Error de conexión. Verifica tu internet.';
+    const em=e.message||'';
+    if(em.includes('401')||em.includes('auth')||em.includes('invalid'))msg='❌ API Key inválida o expirada. <button class="btn-s" style="margin-left:8px;font-size:12px;padding:6px 10px" onclick="cambiarKey()">🔑 Cambiar Key</button>';
+    else if(em.includes('429'))msg='⏳ Demasiadas peticiones. Espera un momento.';
+    else if(em.includes('403'))msg='❌ Sin créditos. Recarga tu cuenta en console.anthropic.com';
+    else if(em.includes('500'))msg='❌ Error en el servidor de Anthropic. Intenta en unos minutos.';
+    document.getElementById('leccion-result').innerHTML=`<div class="card"><div style="color:var(--red);font-size:13px;margin-bottom:8px">${msg}</div><div style="color:var(--muted);font-size:11px;font-family:monospace;background:#0d1117;padding:8px;border-radius:6px">${em||'Error desconocido'}</div></div>`;
+  }
   btn.textContent='📖 Aprender →';btn.disabled=false;
 }
 function usarTema(t){document.getElementById('tema-input').value=t;aprenderTema();}
